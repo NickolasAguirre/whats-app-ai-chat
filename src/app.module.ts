@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { createObserveModule } from '@nestjs/observe';
 import { ConfigModule } from '@nestjs/config';
-import { WhatsappMessagesControllerModule } from './controller/whatsapp-messages.controller.module.js';
-import { GeminiModule } from './infrastructure/extern/gemini/gemini.module.js';
-import { GeminiService } from './infrastructure/extern/gemini/gemini.service.js';
+import { WhatsappMessagesControllerModule } from './controller/whatsapp-message.module.js';
+import { GeminiModule } from './infrastructure/extern/gemini/gemini-proxy.module.js';
+import { WhatsAppModule } from './infrastructure/extern/whats-app/whats-app-proxy.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -21,8 +21,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     }),
     WhatsappMessagesControllerModule,
     GeminiModule,
+    WhatsAppModule,
   ],
-  providers: [],
-
 })
 export class AppModule {}
