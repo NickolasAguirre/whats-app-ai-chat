@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WhatsappMessagesControllerService } from './whats-app-message.service.js';
-import { AiMessageGeneratorPort } from '../../domain/ports/ai-port/ai-message-generator.port.js';
+import { AiPort } from '../../domain/ports/ai-port/ai.port.js';
 import { WhatsAppPort } from '../../domain/ports/whats-app-port/whats-app.port.js';
 
 describe('WhatsappMessagesControllerService', () => {
@@ -10,7 +10,7 @@ describe('WhatsappMessagesControllerService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WhatsappMessagesControllerService,
-        { provide: AiMessageGeneratorPort, useValue: { generate: vi.fn() } },
+        { provide: AiPort, useValue: { generateMessage: vi.fn() } },
         { provide: WhatsAppPort, useValue: { sendMessage: vi.fn() } },
       ],
     }).compile();

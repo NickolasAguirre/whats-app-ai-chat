@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { createObserveModule } from '@nestjs/observe';
 import { ConfigModule } from '@nestjs/config';
 import { WhatsappMessagesControllerModule } from './controller/whatsapp-message.module.js';
-import { GeminiModule } from './infrastructure/extern/gemini/gemini-proxy.module.js';
 import { WhatsAppModule } from './infrastructure/extern/whats-app/whats-app-proxy.module.js';
+import { AiModule } from './infrastructure/extern/ai/ai.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -20,8 +20,8 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
       serviceId: 'whats-app-ai-chat',
     }),
     WhatsappMessagesControllerModule,
-    GeminiModule,
     WhatsAppModule,
+    AiModule,
   ],
 })
 export class AppModule {}

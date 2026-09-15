@@ -19,6 +19,5 @@ export class WhatsAppService implements WhatsAppPort {
         };
 
         const returnData = await firstValueFrom(this.http.post(url, message, { headers: headers }));
-        console.log(returnData);
     }
 }

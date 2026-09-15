@@ -11,7 +11,6 @@ export class YCloudWebhookSignatureGuard implements CanActivate {
 
     canActivate(context: ExecutionContext): boolean {
         const request = context.switchToHttp().getRequest<RawBodyRequest<Request>>();
-        console.log(request.headers);
         const signatureHeader = request.headers[YCLOUD_SIGNATURE_HEADER];
         const rawBody = request.rawBody;
 
