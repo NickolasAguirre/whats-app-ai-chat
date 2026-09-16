@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id              String          @id @default(uuid())
+  name            String
+  active          Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  whatsAppNumbers WhatsAppNumber[]
+  people          Person[]
+  instructions    Instructions?
+}
+
+model WhatsAppNumber {
+  id                    String  @id @default(uuid())
+  tenantId              String
+  tenant                Tenant  @relation(fields: [tenantId], references: [id])
+  phoneNumber           String  @unique
+  wabaId                String  @unique
+  ycloudApiKeySecretRef String
+  webhookSecretRef      String
+  active                Boolean @default(true)
+
+  @@index([tenantId])
+}
+
+model Person {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  phoneNumber String
+  name        String?
+  createdAt   DateTime @default(now())
+
+  @@unique([tenantId, phoneNumber])
+}
+
+model Instructions {
+  id        String   @id @default(uuid())
+  tenantId  String   @unique
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  content   String
+  updatedAt DateTime @updatedAt
+}
