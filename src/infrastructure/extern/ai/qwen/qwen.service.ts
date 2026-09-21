@@ -11,7 +11,7 @@ export class QwenService implements AiSelectedPort {
         try {
             const response = await this.open_ai.responses.create({
                 model: this.model,
-                input: 'Mi nombre es Nickolas',
+                input: message,
             });
 
             return response.output_text ?? '';

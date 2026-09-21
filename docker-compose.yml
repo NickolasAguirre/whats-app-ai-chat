@@ -1,0 +1,41 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_PROJECT_CODE=${GEMINI_PROJECT_CODE}
+      - API_KEY_YCLOUD=${API_KEY_YCLOUD}
+      - QWEN_API_KEY=${QWEN_API_KEY}
+      - QWEN_URL_BASE_OPEN_AI=${QWEN_URL_BASE_OPEN_AI}
+      - QWEN_URL_DASH_OPEN=${QWEN_URL_DASH_OPEN}
+      - Y_CLOUD_URL=${Y_CLOUD_URL}
+      - YCLOUD_WEBHOOK_SECRET=${YCLOUD_WEBHOOK_SECRET}
+    depends_on:
+      - db
+      - redis
+
+
+  db:
+    image: postgres:18-bookworm
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}          
+      POSTGRES_PASSWORD: ${DB_PASSWORD} 
+      POSTGRES_DB: ${DB_NAME} 
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql 
+
+  redis: 
+    image: redis:8.10-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
+
