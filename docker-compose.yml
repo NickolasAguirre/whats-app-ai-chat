@@ -13,6 +13,8 @@ services:
       - QWEN_URL_DASH_OPEN=${QWEN_URL_DASH_OPEN}
       - Y_CLOUD_URL=${Y_CLOUD_URL}
       - YCLOUD_WEBHOOK_SECRET=${YCLOUD_WEBHOOK_SECRET}
+      - APP_KEY_NEST_LOGGER=${APP_KEY_NEST_LOGGER}
+      - APP_SECRET_NEST_LOGGER=${APP_SECRET_NEST_LOGGER}
     depends_on:
       - db
       - redis
