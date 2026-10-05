@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { WhatsappMessagesControllerModule } from './controller/whatsapp-message.module.js';
 import { WhatsAppModule } from './infrastructure/extern/whats-app/whats-app-proxy.module.js';
 import { AiModule } from './infrastructure/extern/ai/ai.module.js';
+import { RedisModule } from './infrastructure/persistence/redis/redis.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -22,6 +23,8 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     WhatsappMessagesControllerModule,
     WhatsAppModule,
     AiModule,
+    RedisModule,
   ],
+  providers: [],
 })
 export class AppModule {}
