@@ -1,23 +1,35 @@
-import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { WhatsAppMessage } from '../../../core/domain/entities/whats-app-message.entity.js';
 import { WhatsAppPort } from '../../../core/domain/ports/whats-app-port/whats-app.port.js';
+import { WhatsAppNumberRepositoryPort } from '../../../core/domain/ports/whats-app-number-port/whats-app-number.port.js';
+import { SecretsPort } from '../../../core/domain/ports/secrets-port/secrets.port.js';
+
+const Y_CLOUD_SEND_URL = 'https://api.ycloud.com/v2/whatsapp/messages';
 
 @Injectable()
 export class WhatsAppService implements WhatsAppPort {
-    constructor(private readonly http: HttpService, private readonly config: ConfigService) {}
+    constructor(
+        private readonly http: HttpService,
+        @Inject(WhatsAppNumberRepositoryPort) private readonly whatsAppNumberRepository: WhatsAppNumberRepositoryPort,
+        @Inject(SecretsPort) private readonly secrets: SecretsPort,
+    ) {}
 
     async sendMessage(message: WhatsAppMessage): Promise<void> {
-        const url = this.config.get<string>("Y_CLOUD_URL") ?? "";
-        const apiKeyCloud = this.config.get<string>("API_KEY_YCLOUD") ?? "";
+        const whatsAppNumber = await this.whatsAppNumberRepository.findByExternalId(message.from);
+
+        if (!whatsAppNumber) {
+            throw new Error(`No WhatsAppNumber registered for sender ${message.from}`);
+        }
+
+        const apiKey = await this.secrets.getSecret(whatsAppNumber.ycloudApiKeySecretRef);
         const headers = {
             'accept': 'application/json',
             'content-type': 'application/json',
-            'X-API-Key': apiKeyCloud
+            'X-API-Key': apiKey,
         };
 
-        const returnData = await firstValueFrom(this.http.post(url, message, { headers: headers }));
+        await firstValueFrom(this.http.post(Y_CLOUD_SEND_URL, message, { headers }));
     }
 }
