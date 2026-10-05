@@ -120,9 +120,7 @@ Expected: `Generated Prisma Client` sin errores — confirma que el schema es v�
 
 ```bash
 git add prisma/schema.prisma package.json pnpm-lock.yaml .env.example
-git commit -m "feat: add Prisma schema for Tenant/WhatsAppNumber/Person/Instructions
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git commit -m "feat: add Prisma schema for Tenant/WhatsAppNumber/Person/Instructions"
 ```
 
 (No se agrega `.env` real al commit — ya está en `.gitignore`. Si no existe un `.env.example`, crear uno con `DATABASE_URL=` vacío como referencia para el equipo.)
@@ -215,9 +213,7 @@ Expected: PASS (2 tests) — no requiere una conexión real a Postgres porque `T
 
 ```bash
 git add src/infrastructure/persistence/prisma/
-git commit -m "feat: add PrismaService wrapper and PrismaModule
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git commit -m "feat: add PrismaService wrapper and PrismaModule"
 ```
 
 ---
@@ -347,9 +343,7 @@ Expected: PASS (5 tests)
 
 ```bash
 git add src/core/domain/entities/
-git commit -m "feat: add multi-tenant domain entities (Tenant, WhatsAppNumber, Person, Instructions, ConversationMessage)
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git commit -m "feat: add multi-tenant domain entities (Tenant, WhatsAppNumber, Person, Instructions, ConversationMessage)"
 ```
 
 ---
@@ -488,9 +482,7 @@ Expected: PASS (3 tests)
 
 ```bash
 git add src/core/domain/ports/whats-app-number-port/ src/infrastructure/persistence/prisma/whats-app-number-prisma.repository.ts src/infrastructure/persistence/prisma/whats-app-number-repository.module.ts src/infrastructure/persistence/prisma/whats-app-number-prisma.repository.spec.ts
-git commit -m "feat: add WhatsAppNumberRepositoryPort with Prisma adapter
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git commit -m "feat: add WhatsAppNumberRepositoryPort with Prisma adapter"
 ```
 
 ---
@@ -635,9 +627,7 @@ Expected: PASS (2 tests)
 
 ```bash
 git add src/core/domain/ports/person-port/ src/infrastructure/persistence/prisma/person-prisma.repository.ts src/infrastructure/persistence/prisma/person-repository.module.ts src/infrastructure/persistence/prisma/person-prisma.repository.spec.ts
-git commit -m "feat: add PersonRepositoryPort with Prisma adapter (findOrCreate)
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git commit -m "feat: add PersonRepositoryPort with Prisma adapter (findOrCreate)"
 ```
 
 ---
@@ -766,9 +756,7 @@ Expected: PASS (2 tests)
 
 ```bash
 git add src/core/domain/ports/instructions-port/ src/infrastructure/persistence/prisma/instructions-prisma.repository.ts src/infrastructure/persistence/prisma/instructions-repository.module.ts src/infrastructure/persistence/prisma/instructions-prisma.repository.spec.ts
-git commit -m "feat: add InstructionsRepositoryPort with Prisma adapter
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git commit -m "feat: add InstructionsRepositoryPort with Prisma adapter"
 ```
 
 ---
@@ -893,9 +881,7 @@ Expected: PASS (2 tests)
 
 ```bash
 git add src/core/domain/ports/secrets-port/ src/infrastructure/extern/secrets/
-git commit -m "feat: add SecretsPort with env-var-backed stub adapter
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git commit -m "feat: add SecretsPort with env-var-backed stub adapter"
 ```
 
 ---
@@ -903,8 +889,8 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ## Task 8: Cliente de Redis (`RedisService` + `RedisModule`)
 
 **Files:**
-- Modify: `package.json` (agregar `ioredis`)
-- Modify: `.env` (agregar `REDIS_URL`, `MESSAGE_MEMORY_TTL_SECONDS`)
+- Modify: `package.json` y `pnpm-lock.yaml` (`ioredis` — ya instalado por el controller, ver Step 1)
+- Modify: `.env.example` (`REDIS_URL`, `MESSAGE_MEMORY_TTL_SECONDS` — ya agregadas por el controller, ver Step 2)
 - Create: `src/infrastructure/persistence/redis/redis.service.ts`
 - Create: `src/infrastructure/persistence/redis/redis.module.ts`
 - Test: `src/infrastructure/persistence/redis/redis.service.spec.ts`
@@ -912,19 +898,13 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 **Interfaces:**
 - Produces: `RedisService` (envuelve un cliente `ioredis`, `exports: [RedisService]`) — usado por Task 9.
 
-- [ ] **Step 1: Instalar dependencia**
+- [x] **Step 1: Instalar dependencia (ya hecho por el controller)**
 
-```bash
-pnpm add ioredis
-```
+`ioredis` 6.0.0 ya está instalado (`pnpm add ioredis` corrido por el controller); `package.json` y `pnpm-lock.yaml` quedan modificados sin commitear — incluirlos en el commit de esta tarea. **No correr `pnpm add` de nuevo.** Confirmar con `npx tsc --noEmit` que `import Redis from 'ioredis'` compila con los tipos de la v6; si no, ajustar el import lo mínimo posible y reportarlo.
 
-- [ ] **Step 2: Agregar variables de entorno**
+- [x] **Step 2: Variables de entorno (ya hechas por el controller)**
 
-Agregar a `.env`:
-```
-REDIS_URL = redis://localhost:6379
-MESSAGE_MEMORY_TTL_SECONDS = 21600
-```
+`REDIS_URL = redis://localhost:6379` y `MESSAGE_MEMORY_TTL_SECONDS = 21600` ya están al final del `.env` (gitignoreado y con secretos: **no leerlo ni tocarlo**) y en `.env.example` (tracked, incluirlo en el commit). Dentro de docker-compose la app debe usar `REDIS_URL=redis://redis:6379` (el hostname es el nombre del servicio) — eso se resuelve en la Task 14, no acá.
 
 - [ ] **Step 3: Escribir el test que falla**
 
@@ -949,8 +929,8 @@ describe('RedisService', () => {
     service = module.get<RedisService>(RedisService);
   });
 
-  afterEach(async () => {
-    await service.getClient().quit();
+  afterEach(() => {
+    service.getClient().disconnect();
   });
 
   it('should be defined', () => {
@@ -960,6 +940,13 @@ describe('RedisService', () => {
   it('expone un cliente ioredis construido con REDIS_URL', () => {
     expect(service.getClient()).toBeDefined();
     expect(configMock.get).toHaveBeenCalledWith('REDIS_URL');
+  });
+
+  it('falla rápido si Redis está caído, para que el use-case degrade a "sin memoria"', () => {
+    const { options } = service.getClient();
+
+    expect(options.maxRetriesPerRequest).toBe(1);
+    expect(options.commandTimeout).toBe(2000);
   });
 });
 ```
@@ -982,7 +969,11 @@ export class RedisService implements OnModuleDestroy {
     private readonly client: Redis;
 
     constructor(private readonly config: ConfigService) {
-        this.client = new Redis(this.config.get<string>('REDIS_URL') ?? 'redis://localhost:6379');
+        // Por defecto ioredis reintenta 20 veces (~10 s) antes de fallar; con Redis caído eso demoraría la respuesta del webhook.
+        this.client = new Redis(this.config.get<string>('REDIS_URL') ?? 'redis://localhost:6379', {
+            maxRetriesPerRequest: 1,
+            commandTimeout: 2000,
+        });
     }
 
     getClient(): Redis {
@@ -990,7 +981,12 @@ export class RedisService implements OnModuleDestroy {
     }
 
     async onModuleDestroy() {
-        await this.client.quit();
+        if (this.client.status === 'ready') {
+            await this.client.quit();
+            return;
+        }
+
+        this.client.disconnect();
     }
 }
 ```
@@ -1012,15 +1008,13 @@ export class RedisModule {}
 - [ ] **Step 7: Correr el test y verificar que pasa**
 
 Run: `npx vitest run src/infrastructure/persistence/redis/redis.service.spec.ts`
-Expected: PASS (2 tests). Nota: `ioredis` intenta conectar en background pero no bloquea la construcción del cliente ni el test — si no hay Redis corriendo local, va a reintentar en segundo plano sin hacer fallar el test (el test solo verifica que el objeto se construyó).
+Expected: PASS (3 tests). Nota: `ioredis` intenta conectar en background, pero el test no depende de que haya un Redis levantado: solo verifica la construcción del cliente y sus opciones, y `afterEach` usa `disconnect()` (inmediato, a diferencia de `quit()`, que puede colgarse si no hay conexión).
 
 - [ ] **Step 8: Commit**
 
 ```bash
 git add package.json pnpm-lock.yaml src/infrastructure/persistence/redis/ .env.example
-git commit -m "feat: add RedisService wrapper and RedisModule
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git commit -m "feat: add RedisService wrapper and RedisModule"
 ```
 
 ---
@@ -1092,6 +1086,18 @@ describe('MessageMemoryRedisRepository', () => {
     expect(redisClientMock.lrange).toHaveBeenCalledWith('conv:t1:p1', 0, -1);
     expect(result).toHaveLength(2);
     expect(result[0].text).toBe('hola');
+    expect(result[0].role).toBe('inbound');
+  });
+
+  it('getRecentMessages reconstruye timestamp como Date (JSON.parse lo devuelve como string)', async () => {
+    redisClientMock.lrange.mockResolvedValueOnce([
+      JSON.stringify({ role: 'inbound', text: 'hola', timestamp: '2026-09-14T00:00:00.000Z' }),
+    ]);
+
+    const [message] = await repository.getRecentMessages('t1', 'p1');
+
+    expect(message.timestamp).toBeInstanceOf(Date);
+    expect(message.timestamp.toISOString()).toBe('2026-09-14T00:00:00.000Z');
   });
 
   it('getRecentMessages devuelve un array vacío si no hay historial', async () => {
@@ -1158,7 +1164,10 @@ export class MessageMemoryRedisRepository implements MessageMemoryPort {
         const key = this.key(tenantId, personId);
         const raw = await this.redis.getClient().lrange(key, 0, -1);
 
-        return raw.map((entry) => JSON.parse(entry) as ConversationMessage);
+        return raw.map((entry) => {
+            const parsed = JSON.parse(entry) as Omit<ConversationMessage, 'timestamp'> & { timestamp: string };
+            return { ...parsed, timestamp: new Date(parsed.timestamp) };
+        });
     }
 }
 ```
@@ -1186,15 +1195,13 @@ export class MessageMemoryRepositoryModule {}
 - [ ] **Step 6: Correr el test y verificar que pasa**
 
 Run: `npx vitest run src/infrastructure/persistence/redis/message-memory-redis.repository.spec.ts`
-Expected: PASS (3 tests)
+Expected: PASS (4 tests)
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add src/core/domain/ports/message-memory-port/ src/infrastructure/persistence/redis/message-memory-redis.repository.ts src/infrastructure/persistence/redis/message-memory-repository.module.ts src/infrastructure/persistence/redis/message-memory-redis.repository.spec.ts
-git commit -m "feat: add MessageMemoryPort with Redis-backed adapter (TTL memory)
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git commit -m "feat: add MessageMemoryPort with Redis-backed adapter (TTL memory)"
 ```
 
 ---
@@ -1319,7 +1326,9 @@ export class AiService implements AiPort {
 }
 ```
 
-- [ ] **Step 6: Actualizar `GeminiService` (usa `instructions` como contexto de sistema; ignora `history` por ahora — Gemini se integra vía `interactions.create`, que no tiene un parámetro de historial en este SDK todavía)**
+- [ ] **Step 6: Actualizar `GeminiService` (las `instructions` van en `system_instruction`; el `history` se manda como transcripción en el `input`)**
+
+El SDK de `@google/genai` acepta `system_instruction?: string` e `input` como `string` (también admite listas de pasos, pero un string es lo más simple y seguro de tipar). Verificado en `node_modules/@google/genai/dist/node/node.d.ts` (`CreateModelInteraction`, `InteractionsInput`).
 
 ```ts
 // src/infrastructure/extern/ai/gemini/gemini-proxy.service.ts
@@ -1327,6 +1336,7 @@ import { GoogleGenAI } from '@google/genai';
 import { Injectable } from '@nestjs/common';
 import { AiSelectedPort } from '../ports/ai-selected.port.js';
 import { AiGenerateOptions } from '../../../../core/domain/ports/ai-port/ai.port.js';
+import { ConversationMessage } from '../../../../core/domain/entities/conversation-message.entity.js';
 
 @Injectable()
 export class GeminiService implements AiSelectedPort {
@@ -1334,14 +1344,33 @@ export class GeminiService implements AiSelectedPort {
     geminiModel = "gemini-3.5-flash-lite";
 
     async generateMessage(message: string, options?: AiGenerateOptions): Promise<string> {
-        const input = options?.instructions ? `${options.instructions}\n\n${message}` : message;
-        const answer = await this.ai_gemini.interactions.create({ model: this.geminiModel, input });
+        const answer = await this.ai_gemini.interactions.create({
+            model: this.geminiModel,
+            input: this.buildInput(message, options?.history ?? []),
+            system_instruction: options?.instructions,
+        });
         return answer.output_text ?? '';
+    }
+
+    private buildInput(message: string, history: ConversationMessage[]): string {
+        if (history.length === 0) {
+            return message;
+        }
+
+        const transcript = history
+            .map((entry) => `${entry.role === 'inbound' ? 'Usuario' : 'Asistente'}: ${entry.text}`)
+            .join('\n');
+
+        return `Conversación previa:\n${transcript}\n\nMensaje actual del usuario: ${message}`;
     }
 }
 ```
 
-- [ ] **Step 7: Actualizar `QwenService` (limpia el código de debug pendiente del `Pendientes` de la nota de Obsidian de paso — usa el parámetro `message` real, arma el input con `instructions`)**
+- [ ] **Step 7: Actualizar `QwenService` (las `instructions` van en el parámetro `instructions`; el `history` se manda como mensajes `user`/`assistant` en el `input`)**
+
+La API `responses.create` del SDK `openai` acepta `instructions?: string | null` e `input` como lista de mensajes con `role: 'user' | 'assistant' | 'system' | 'developer'` (`EasyInputMessage`). Verificado en `node_modules/openai/resources/responses/responses.d.ts`.
+
+Este paso también elimina el `try/catch` que devolvía `""` y los restos de debug que hoy tiene `QwenService`: devolver un string vacío terminaba intentando mandar un mensaje de WhatsApp vacío, así que ahora los errores del proveedor se propagan y el webhook responde con error en vez de enviar basura al usuario.
 
 ```ts
 // src/infrastructure/extern/ai/qwen/qwen.service.ts
@@ -1356,10 +1385,15 @@ export class QwenService implements AiSelectedPort {
     model = 'qwen3.7-flash';
 
     async generateMessage(message: string, options?: AiGenerateOptions): Promise<string> {
-        const input = options?.instructions ? `${options.instructions}\n\n${message}` : message;
+        const history = (options?.history ?? []).map((entry) => ({
+            role: entry.role === 'inbound' ? ('user' as const) : ('assistant' as const),
+            content: entry.text,
+        }));
+
         const response = await this.open_ai.responses.create({
             model: this.model,
-            input,
+            instructions: options?.instructions,
+            input: [...history, { role: 'user' as const, content: message }],
         });
 
         return response.output_text ?? '';
@@ -1370,32 +1404,80 @@ export class QwenService implements AiSelectedPort {
 - [ ] **Step 8: Actualizar los specs de `GeminiService` y `QwenService`**
 
 ```ts
-// src/infrastructure/extern/ai/gemini/gemini-proxy.service.spec.ts — agregar este test al describe existente
-it('generateMessage antepone las instructions al mensaje si vienen', async () => {
+// src/infrastructure/extern/ai/gemini/gemini-proxy.service.spec.ts — agregar estos tests al describe existente
+it('generateMessage manda las instructions como system_instruction y el mensaje como input', async () => {
     const createMock = vi.fn().mockResolvedValueOnce({ output_text: 'ok' });
     (service as any).ai_gemini = { interactions: { create: createMock } };
 
-    await service.generateMessage('hola', { instructions: 'sé formal' });
+    const result = await service.generateMessage('hola', { instructions: 'sé formal' });
+
+    expect(result).toBe('ok');
+    expect(createMock).toHaveBeenCalledWith({
+      model: service.geminiModel,
+      input: 'hola',
+      system_instruction: 'sé formal',
+    });
+});
+
+it('generateMessage incluye el historial como transcripción antes del mensaje actual', async () => {
+    const createMock = vi.fn().mockResolvedValueOnce({ output_text: 'ok' });
+    (service as any).ai_gemini = { interactions: { create: createMock } };
+    const history = [
+      { role: 'inbound' as const, text: 'hola', timestamp: new Date() },
+      { role: 'outbound' as const, text: 'hola, en qué te ayudo?', timestamp: new Date() },
+    ];
+
+    await service.generateMessage('quiero un turno', { history });
 
     expect(createMock).toHaveBeenCalledWith({
       model: service.geminiModel,
-      input: 'sé formal\n\nhola',
+      input: 'Conversación previa:\nUsuario: hola\nAsistente: hola, en qué te ayudo?\n\nMensaje actual del usuario: quiero un turno',
+      system_instruction: undefined,
     });
 });
 ```
 
 ```ts
-// src/infrastructure/extern/ai/qwen/qwen.service.spec.ts — agregar este test al describe existente
-it('generateMessage antepone las instructions al mensaje si vienen', async () => {
+// src/infrastructure/extern/ai/qwen/qwen.service.spec.ts — agregar estos tests al describe existente
+it('generateMessage manda las instructions en el parámetro instructions y el mensaje como input', async () => {
     const createMock = vi.fn().mockResolvedValueOnce({ output_text: 'ok' });
     (service as any).open_ai = { responses: { create: createMock } };
 
-    await service.generateMessage('hola', { instructions: 'sé formal' });
+    const result = await service.generateMessage('hola', { instructions: 'sé formal' });
+
+    expect(result).toBe('ok');
+    expect(createMock).toHaveBeenCalledWith({
+      model: service.model,
+      instructions: 'sé formal',
+      input: [{ role: 'user', content: 'hola' }],
+    });
+});
+
+it('generateMessage mapea el historial a mensajes user/assistant antes del mensaje actual', async () => {
+    const createMock = vi.fn().mockResolvedValueOnce({ output_text: 'ok' });
+    (service as any).open_ai = { responses: { create: createMock } };
+    const history = [
+      { role: 'inbound' as const, text: 'hola', timestamp: new Date() },
+      { role: 'outbound' as const, text: 'hola, en qué te ayudo?', timestamp: new Date() },
+    ];
+
+    await service.generateMessage('quiero un turno', { history });
 
     expect(createMock).toHaveBeenCalledWith({
       model: service.model,
-      input: 'sé formal\n\nhola',
+      instructions: undefined,
+      input: [
+        { role: 'user', content: 'hola' },
+        { role: 'assistant', content: 'hola, en qué te ayudo?' },
+        { role: 'user', content: 'quiero un turno' },
+      ],
     });
+});
+
+it('generateMessage propaga el error del proveedor en vez de devolver un string vacío', async () => {
+    (service as any).open_ai = { responses: { create: vi.fn().mockRejectedValueOnce(new Error('provider down')) } };
+
+    await expect(service.generateMessage('hola')).rejects.toThrow('provider down');
 });
 ```
 
@@ -1408,9 +1490,7 @@ Expected: PASS (todos los specs bajo `infrastructure/extern/ai/`)
 
 ```bash
 git add src/core/domain/ports/ai-port/ai.port.ts src/infrastructure/extern/ai/
-git commit -m "feat: extend AiPort/AiSelectedPort to accept instructions and conversation history
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git commit -m "feat: extend AiPort/AiSelectedPort to accept instructions and conversation history"
 ```
 
 ---
@@ -1624,9 +1704,7 @@ Expected: PASS (3 tests)
 
 ```bash
 git add src/infrastructure/extern/whats-app/guards/ src/infrastructure/extern/whats-app/whats-app-proxy.module.ts
-git commit -m "feat: resolve tenant in YCloudWebhookSignatureGuard before validating signature
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git commit -m "feat: resolve tenant in YCloudWebhookSignatureGuard before validating signature"
 ```
 
 ---
@@ -1941,9 +2019,7 @@ Expected: PASS (2 tests)
 
 ```bash
 git add src/core/use-case/whats-app-message/ src/controller/
-git commit -m "feat: resolve tenant context in use-case and controller (instructions, memory, per-tenant reply)
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git commit -m "feat: resolve tenant context in use-case and controller (instructions, memory, per-tenant reply)"
 ```
 
 ---
@@ -2074,9 +2150,7 @@ Expected: PASS (2 tests)
 
 ```bash
 git add src/infrastructure/extern/whats-app/whats-app-proxy.service.ts src/infrastructure/extern/whats-app/whats-app-proxy.service.spec.ts
-git commit -m "feat: resolve per-tenant YCloud credentials in WhatsAppService instead of global env vars
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git commit -m "feat: resolve per-tenant YCloud credentials in WhatsAppService instead of global env vars"
 ```
 
 ---
@@ -2113,7 +2187,5 @@ Agregar a `docs/architecture.md` una sección "Multi-tenancy" con el mapa de ent
 
 ```bash
 git add docs/architecture.md docs/flow.md CLAUDE_CONTEXT.md
-git commit -m "docs: update architecture docs for multi-tenant persistence layer
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+git commit -m "docs: update architecture docs for multi-tenant persistence layer"
 ```
