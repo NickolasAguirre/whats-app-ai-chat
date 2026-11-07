@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- **Ubicación del repo nuevo:** `C:\Users\nicko\projects\PROYECTOS\rag-service`. TODOS los comandos de este plan se corren desde esa carpeta, salvo que se indique otra cosa.
+- **Ubicación del repo nuevo:** `C:\Users\nicko\projects\PROYECTOS\what-app\Rag-API`. TODOS los comandos de este plan se corren desde esa carpeta, salvo que se indique otra cosa.
 - **Contrato público:** REST con OpenAPI (Swagger en `/docs`), autenticación con el header `X-API-Key`. El tenant sale de la key.
 - **Base de datos:** imagen `pgvector/pgvector:pg18` (verificada, pgvector 0.8.7). Prisma para lo relacional; SQL crudo (`$queryRaw` / `$executeRaw`) para el tipo `vector`.
 - **Cola:** BullMQ sobre Redis.
@@ -72,8 +72,8 @@ rag-service/
 - [ ] **Step 1: Crear la carpeta e inicializar git**
 
 ```bash
-mkdir -p /c/Users/nicko/projects/PROYECTOS/rag-service
-cd /c/Users/nicko/projects/PROYECTOS/rag-service
+mkdir -p /c/Users/nicko/projects/PROYECTOS/what-app/Rag-API
+cd /c/Users/nicko/projects/PROYECTOS/what-app/Rag-API
 git init
 ```
 

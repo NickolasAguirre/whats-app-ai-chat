@@ -10,7 +10,7 @@ async function bootstrap() {
   });
 
   const config = new DocumentBuilder()
-  .setTitle("Chat-WhatsApp-AI")
+  .setTitle("whatsapp-chat-bot-API")
   .setVersion("1")
   .addTag("App")
   .build();

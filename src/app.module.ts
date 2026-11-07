@@ -5,6 +5,7 @@ import { WhatsappMessagesControllerModule } from './controller/whatsapp-message.
 import { WhatsAppModule } from './infrastructure/extern/whats-app/whats-app-proxy.module.js';
 import { AiModule } from './infrastructure/extern/ai/ai.module.js';
 import { RedisModule } from './infrastructure/persistence/redis/redis.module.js';
+import { RagModule } from './infrastructure/extern/rag/rag.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -24,6 +25,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     WhatsAppModule,
     AiModule,
     RedisModule,
+    RagModule,
   ],
   providers: [],
 })
