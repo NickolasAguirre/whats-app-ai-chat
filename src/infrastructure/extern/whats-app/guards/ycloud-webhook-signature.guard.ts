@@ -1,25 +1,16 @@
-import { CanActivate, ExecutionContext, Injectable, Inject, RawBodyRequest, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, RawBodyRequest, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Request } from 'express';
-import { WhatsAppNumberRepositoryPort } from '../../../../core/domain/ports/whats-app-number-port/whats-app-number.port.js';
-import { SecretsPort } from '../../../../core/domain/ports/secrets-port/secrets.port.js';
-import { WhatsAppNumber } from '../../../../core/domain/entities/whats-app-number.entity.js';
 
 const YCLOUD_SIGNATURE_HEADER = 'ycloud-signature';
 
-interface RequestWithWhatsAppNumber extends RawBodyRequest<Request> {
-    whatsAppNumber?: WhatsAppNumber;
-}
-
 @Injectable()
 export class YCloudWebhookSignatureGuard implements CanActivate {
-    constructor(
-        @Inject(WhatsAppNumberRepositoryPort) private readonly whatsAppNumberRepository: WhatsAppNumberRepositoryPort,
-        @Inject(SecretsPort) private readonly secrets: SecretsPort,
-    ) {}
+    constructor(private readonly config: ConfigService) {}
 
-    async canActivate(context: ExecutionContext): Promise<boolean> {
-        const request = context.switchToHttp().getRequest<RequestWithWhatsAppNumber>();
+    canActivate(context: ExecutionContext): boolean {
+        const request = context.switchToHttp().getRequest<RawBodyRequest<Request>>();
         const signatureHeader = request.headers[YCLOUD_SIGNATURE_HEADER];
         const rawBody = request.rawBody;
 
@@ -27,20 +18,12 @@ export class YCloudWebhookSignatureGuard implements CanActivate {
             throw new UnauthorizedException('Missing webhook signature');
         }
 
-        const wabaId = request.body?.whatsappInboundMessage?.wabaId;
-        const whatsAppNumber = wabaId ? await this.whatsAppNumberRepository.findByExternalId(wabaId) : null;
-
-        if (!whatsAppNumber) {
-            throw new UnauthorizedException('Missing webhook signature');
-        }
-
-        const secret = await this.secrets.getSecret(whatsAppNumber.webhookSecretRef);
+        const secret = this.config.getOrThrow<string>('YCLOUD_WEBHOOK_SECRET');
 
         if (!this.verifySignature(rawBody.toString('utf8'), signatureHeader, secret)) {
             throw new UnauthorizedException('Invalid webhook signature');
         }
 
-        request.whatsAppNumber = whatsAppNumber;
         return true;
     }
 

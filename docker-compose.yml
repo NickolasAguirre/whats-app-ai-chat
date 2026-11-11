@@ -2,7 +2,7 @@ services:
   app:
     build: .
     ports:
-      - "3000:3000"
+      - "3200:3200"
     environment:
       - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
@@ -15,13 +15,17 @@ services:
       - YCLOUD_WEBHOOK_SECRET=${YCLOUD_WEBHOOK_SECRET}
       - APP_KEY_NEST_LOGGER=${APP_KEY_NEST_LOGGER}
       - APP_SECRET_NEST_LOGGER=${APP_SECRET_NEST_LOGGER}
+      - RAG_API_URL=${RAG_API_URL}
+      - RAG_API_KEY=${RAG_API_KEY}
+      - RAG_COLLECTION=${RAG_COLLECTION:-knowledge}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:4200,http://localhost:4201}
     depends_on:
       - db
       - redis
 
 
   db:
-    image: postgres:18-bookworm
+    image: pgvector/pgvector:pg18-bookworm
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER}          

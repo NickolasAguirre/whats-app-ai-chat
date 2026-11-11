@@ -62,4 +62,15 @@ describe('QwenService', () => {
 
     await expect(service.generateMessage('hola')).rejects.toThrow('provider down');
   });
+
+  it('generateMessage agrega los fragmentos de conocimiento a las instructions', async () => {
+    const createMock = vi.fn().mockResolvedValueOnce({ output_text: 'ok' });
+    (service as any).open_ai = { responses: { create: createMock } };
+
+    await service.generateMessage('horarios?', { instructions: 'sé formal', knowledge: ['Abrimos de 9 a 18 h.'] });
+
+    const { instructions } = createMock.mock.calls[0][0];
+    expect(instructions).toContain('sé formal');
+    expect(instructions).toContain('[1] Abrimos de 9 a 18 h.');
+  });
 });

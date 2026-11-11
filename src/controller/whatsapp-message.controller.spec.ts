@@ -26,17 +26,16 @@ describe('WhatsappMessagesControllerController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('receiveMessage pasa el tenantId resuelto por el guard al use-case', async () => {
+  it('receiveMessage pasa el mensaje entrante al use-case', async () => {
     const event = {
       whatsappInboundMessage: {
         from: '+1555', to: '+1999', text: { body: 'hola' },
         customerProfile: { name: 'Nico' },
       },
     } as any;
-    const request = { whatsAppNumber: { tenantId: 't1' } } as any;
 
-    await controller.receiveMessage(event, request);
+    await controller.receiveMessage(event);
 
-    expect(serviceMock.handleIncomingMessage).toHaveBeenCalledWith('t1', '+1555', '+1999', 'hola', 'Nico');
+    expect(serviceMock.handleIncomingMessage).toHaveBeenCalledWith('+1555', '+1999', 'hola', 'Nico');
   });
 });

@@ -1,9 +1,6 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { createHmac } from 'node:crypto';
 import { YCloudWebhookSignatureGuard } from './ycloud-webhook-signature.guard.js';
-import { WhatsAppNumberRepositoryPort } from '../../../../core/domain/ports/whats-app-number-port/whats-app-number.port.js';
-import { SecretsPort } from '../../../../core/domain/ports/secrets-port/secrets.port.js';
 
 function buildSignature(payload: string, secret: string): string {
   const timestamp = '1700000000';
@@ -12,64 +9,41 @@ function buildSignature(payload: string, secret: string): string {
   return `t=${timestamp},v1=${signature}`;
 }
 
-function buildContext(headers: Record<string, string>, rawBody: Buffer): ExecutionContext {
+function buildContext(headers: Record<string, string>, rawBody?: Buffer): ExecutionContext {
   return {
     switchToHttp: () => ({
-      getRequest: () => ({ headers, rawBody, body: JSON.parse(rawBody.toString('utf8')) }),
+      getRequest: () => ({ headers, rawBody }),
     }),
   } as unknown as ExecutionContext;
 }
 
 describe('YCloudWebhookSignatureGuard', () => {
+  const configMock = { getOrThrow: vi.fn() };
   let guard: YCloudWebhookSignatureGuard;
-  const whatsAppNumberRepoMock = { findByExternalId: vi.fn() };
-  const secretsMock = { getSecret: vi.fn() };
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        YCloudWebhookSignatureGuard,
-        { provide: WhatsAppNumberRepositoryPort, useValue: whatsAppNumberRepoMock },
-        { provide: SecretsPort, useValue: secretsMock },
-      ],
-    }).compile();
-
-    guard = module.get<YCloudWebhookSignatureGuard>(YCloudWebhookSignatureGuard);
+    configMock.getOrThrow.mockReturnValue('secreto-correcto');
+    guard = new YCloudWebhookSignatureGuard(configMock as never);
   });
 
-  it('rechaza si el número de WhatsApp no está registrado', async () => {
-    whatsAppNumberRepoMock.findByExternalId.mockResolvedValueOnce(null);
-    const body = JSON.stringify({ whatsappInboundMessage: { wabaId: 'unknown' } });
-    const context = buildContext({ 'ycloud-signature': 't=1,v1=x' }, Buffer.from(body));
-
-    await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+  it('rechaza si falta la firma o el cuerpo crudo', () => {
+    expect(() => guard.canActivate(buildContext({}, Buffer.from('{}')))).toThrow(UnauthorizedException);
+    expect(() => guard.canActivate(buildContext({ 'ycloud-signature': 't=1,v1=x' }))).toThrow(UnauthorizedException);
   });
 
-  it('rechaza si la firma no coincide con el secreto del tenant', async () => {
-    const whatsAppNumber = { id: 'w1', tenantId: 't1', webhookSecretRef: 'REF' };
-    whatsAppNumberRepoMock.findByExternalId.mockResolvedValueOnce(whatsAppNumber);
-    secretsMock.getSecret.mockResolvedValueOnce('secreto-correcto');
-    const body = JSON.stringify({ whatsappInboundMessage: { wabaId: 'waba1' } });
+  it('rechaza si la firma no coincide con YCLOUD_WEBHOOK_SECRET', () => {
+    const body = JSON.stringify({ whatsappInboundMessage: {} });
     const context = buildContext({ 'ycloud-signature': 't=1700000000,v1=firmaInvalida' }, Buffer.from(body));
 
-    await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+    expect(() => guard.canActivate(context)).toThrow(UnauthorizedException);
+    expect(configMock.getOrThrow).toHaveBeenCalledWith('YCLOUD_WEBHOOK_SECRET');
   });
 
-  it('acepta la request y adjunta el WhatsAppNumber resuelto cuando la firma es válida', async () => {
-    const whatsAppNumber = { id: 'w1', tenantId: 't1', webhookSecretRef: 'REF' };
-    whatsAppNumberRepoMock.findByExternalId.mockResolvedValueOnce(whatsAppNumber);
-    secretsMock.getSecret.mockResolvedValueOnce('secreto-correcto');
-    const body = JSON.stringify({ whatsappInboundMessage: { wabaId: 'waba1' } });
-    const signature = buildSignature(body, 'secreto-correcto');
-    const request = { headers: { 'ycloud-signature': signature }, rawBody: Buffer.from(body), body: JSON.parse(body) };
-    const context = {
-      switchToHttp: () => ({ getRequest: () => request }),
-    } as unknown as ExecutionContext;
+  it('acepta la request cuando la firma es válida', () => {
+    const body = JSON.stringify({ whatsappInboundMessage: {} });
+    const context = buildContext({ 'ycloud-signature': buildSignature(body, 'secreto-correcto') }, Buffer.from(body));
 
-    const result = await guard.canActivate(context);
-
-    expect(result).toBe(true);
-    expect((request as any).whatsAppNumber).toEqual(whatsAppNumber);
+    expect(guard.canActivate(context)).toBe(true);
   });
 });

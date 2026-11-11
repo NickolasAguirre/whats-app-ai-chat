@@ -52,4 +52,15 @@ describe('GeminiService', () => {
       system_instruction: undefined,
     });
   });
+
+  it('generateMessage agrega los fragmentos de conocimiento al system_instruction', async () => {
+    const createMock = vi.fn().mockResolvedValueOnce({ output_text: 'ok' });
+    (service as any).ai_gemini = { interactions: { create: createMock } };
+
+    await service.generateMessage('horarios?', { instructions: 'sé formal', knowledge: ['Abrimos de 9 a 18 h.'] });
+
+    const { system_instruction } = createMock.mock.calls[0][0];
+    expect(system_instruction).toContain('sé formal');
+    expect(system_instruction).toContain('[1] Abrimos de 9 a 18 h.');
+  });
 });

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AiSelectedPort } from '../ports/ai-selected.port.js';
 import { AiGenerateOptions } from '../../../../core/domain/ports/ai-port/ai.port.js';
 import OpenAI from 'openai';
+import { composeInstructions } from '../../../../core/domain/compose-instructions.js';
 
 @Injectable()
 export class QwenService implements AiSelectedPort {
@@ -16,7 +17,7 @@ export class QwenService implements AiSelectedPort {
 
         const response = await this.open_ai.responses.create({
             model: this.model,
-            instructions: options?.instructions,
+            instructions: composeInstructions(options?.instructions, options?.knowledge),
             input: [...history, { role: 'user' as const, content: message }],
         });
 

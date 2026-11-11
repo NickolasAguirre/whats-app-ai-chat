@@ -9,6 +9,12 @@ async function bootstrap() {
     rawBody: true,
   });
 
+  const allowedOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:4200,http://localhost:4201')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  app.enableCors({ origin: allowedOrigins });
+
   const config = new DocumentBuilder()
   .setTitle("whatsapp-chat-bot-API")
   .setVersion("1")
@@ -17,7 +23,7 @@ async function bootstrap() {
 
   const documentFactory = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup("docs", app, documentFactory)
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3200);
   
   // Log the running port/URL
   const logger = new Logger('Bootstrap');

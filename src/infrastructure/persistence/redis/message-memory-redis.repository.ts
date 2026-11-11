@@ -13,12 +13,12 @@ export class MessageMemoryRedisRepository implements MessageMemoryPort {
         private readonly config: ConfigService,
     ) {}
 
-    private key(tenantId: string, personId: string): string {
-        return `conv:${tenantId}:${personId}`;
+    private key(personId: string): string {
+        return `conv:${personId}`;
     }
 
-    async appendMessage(tenantId: string, personId: string, message: ConversationMessage): Promise<void> {
-        const key = this.key(tenantId, personId);
+    async appendMessage(personId: string, message: ConversationMessage): Promise<void> {
+        const key = this.key(personId);
         const ttlSeconds = Number(this.config.get<string>('MESSAGE_MEMORY_TTL_SECONDS') ?? '21600');
         const client = this.redis.getClient();
 
@@ -27,8 +27,8 @@ export class MessageMemoryRedisRepository implements MessageMemoryPort {
         await client.expire(key, ttlSeconds);
     }
 
-    async getRecentMessages(tenantId: string, personId: string): Promise<ConversationMessage[]> {
-        const key = this.key(tenantId, personId);
+    async getRecentMessages(personId: string): Promise<ConversationMessage[]> {
+        const key = this.key(personId);
         const raw = await this.redis.getClient().lrange(key, 0, -1);
 
         return raw.map((entry) => {

@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { Injectable } from '@nestjs/common';
 import { AiSelectedPort } from '../ports/ai-selected.port.js';
 import { AiGenerateOptions } from '../../../../core/domain/ports/ai-port/ai.port.js';
+import { composeInstructions } from '../../../../core/domain/compose-instructions.js';
 import { ConversationMessage } from '../../../../core/domain/entities/conversation-message.entity.js';
 
 @Injectable()
@@ -13,7 +14,7 @@ export class GeminiService implements AiSelectedPort {
         const answer = await this.ai_gemini.interactions.create({
             model: this.geminiModel,
             input: this.buildInput(message, options?.history ?? []),
-            system_instruction: options?.instructions,
+            system_instruction: composeInstructions(options?.instructions, options?.knowledge),
         });
         return answer.output_text ?? '';
     }

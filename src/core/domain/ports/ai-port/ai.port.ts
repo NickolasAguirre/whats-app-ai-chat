@@ -2,6 +2,7 @@ import { ConversationMessage } from '../../entities/conversation-message.entity.
 
 export interface AiGenerateOptions {
     instructions?: string;
+    knowledge?: string[];
     history?: ConversationMessage[];
 }
 

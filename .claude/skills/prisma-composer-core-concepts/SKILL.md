@@ -98,7 +98,7 @@ imports:
 1. `service.load()`: dependencies (typed RPC clients, database bindings).
 2. `service.input()`: the whole input as one schema-validated object;
    credentials in it are redacting `SecretString` boxes.
-3. `service.port()`: the reserved port to bind (default 3000).
+3. `service.port()`: the reserved port to bind (default 3200).
 
 A service declaration is pure data; the server entry is what your build
 produces and the platform boots:
