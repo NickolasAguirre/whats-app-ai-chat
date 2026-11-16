@@ -1,5 +1,5 @@
 <!-- bmad:context -->
-<!-- Verified 2026-11-15 against 89ecd0e (working tree has uncommitted changes). Managed by bmad-project-context; edits inside this block are replaced on refresh. Keep anything you want preserved outside the markers. -->
+<!-- Verified 2026-11-15 against 64963a7 (working tree has uncommitted changes). Managed by bmad-project-context; edits inside this block are replaced on refresh. Keep anything you want preserved outside the markers. -->
 
 ## whatsapp-chat-bot-API
 
@@ -21,6 +21,7 @@ WhatsApp support bot: YCloud webhook → Gemini/Qwen → reply. NestJS/TypeScrip
 ## Running and verifying
 
 - The bot listens on 3200, not 3000 (3000 is container.API, which `CONTAINER_API_URL` points at).
+- `GET /admin/numbers` returns the one number set in `WHATSAPP_PHONE_NUMBER` (+ `WHATSAPP_NUMBER_LABEL`, `WHATSAPP_WABA_ID`); without it the panel's Números page is empty.
 - `migration:run` reads `dist/`: run `pnpm build` first.
 
 ## Conventions that differ from defaults
