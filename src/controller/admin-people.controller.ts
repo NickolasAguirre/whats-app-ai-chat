@@ -15,6 +15,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
 import { TenantMatchGuard } from './guards/tenant-match.guard.js';
 import { MessagesQueryDto } from './dto/messages-query.dto.js';
+import { PeopleQueryDto } from './dto/people-query.dto.js';
 import {
     ConversationPerson,
     ConversationsQueryPort,
@@ -33,9 +34,14 @@ export class AdminPeopleController {
     constructor(@Inject(ConversationsQueryPort) private readonly conversations: ConversationsQueryPort) {}
 
     @Get()
-    async list(@Query('search') search?: string | string[]) {
-        // `?search=a&search=b` llega como arreglo: solo se acepta un texto.
-        return (await this.conversations.listPeople(typeof search === 'string' ? search : undefined)).map(toPersonDto);
+    async list(@Query() query: PeopleQueryDto) {
+        const from = query.from ? new Date(query.from) : undefined;
+        const to = query.to ? new Date(query.to) : undefined;
+        if (from && to && from >= to) {
+            throw new BadRequestException('"from" debe ser anterior a "to".');
+        }
+
+        return (await this.conversations.listPeople(query.search, { from, to })).map(toPersonDto);
     }
 
     @Get(':id')

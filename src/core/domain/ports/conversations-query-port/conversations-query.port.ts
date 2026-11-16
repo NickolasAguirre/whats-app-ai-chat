@@ -37,9 +37,20 @@ export interface MessagePage {
     hasMore: boolean;
 }
 
+export interface PeopleRange {
+    /** Incluye mensajes desde este instante. */
+    from?: Date;
+    /** Excluye mensajes desde este instante. */
+    to?: Date;
+}
+
 /** Lectura del historial para el panel de administración (solo consulta). */
 export abstract class ConversationsQueryPort {
-    abstract listPeople(search?: string): Promise<ConversationPerson[]>;
+    /**
+     * Personas con su último mensaje. Con `range`, solo las que escribieron o recibieron mensajes en ese rango, y
+     * el "último mensaje" es el último dentro del rango.
+     */
+    abstract listPeople(search?: string, range?: PeopleRange): Promise<ConversationPerson[]>;
     abstract getPerson(personId: string): Promise<ConversationPerson | null>;
     abstract listMessages(personId: string, query: MessagePageQuery): Promise<MessagePage>;
 }

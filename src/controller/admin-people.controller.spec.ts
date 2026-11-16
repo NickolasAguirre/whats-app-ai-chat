@@ -3,6 +3,7 @@ import 'reflect-metadata';
 import { AdminPeopleController } from './admin-people.controller.js';
 import { TenantMatchGuard } from './guards/tenant-match.guard.js';
 import { MessagesQueryDto } from './dto/messages-query.dto.js';
+import { PeopleQueryDto } from './dto/people-query.dto.js';
 
 const PERSON_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -29,9 +30,9 @@ describe('AdminPeopleController', () => {
     it('lista personas con fechas ISO y sin nombre nulo', async () => {
         port.listPeople.mockResolvedValue([person]);
 
-        const result = await controller.list('maria');
+        const result = await controller.list({ search: 'maria' });
 
-        expect(port.listPeople).toHaveBeenCalledWith('maria');
+        expect(port.listPeople).toHaveBeenCalledWith('maria', { from: undefined, to: undefined });
         expect(result).toEqual([
             { id: PERSON_ID, phoneNumber: '+57300', name: undefined, lastMessageAt: '2026-11-15T10:00:00.000Z', lastMessagePreview: 'hola' },
         ]);
@@ -92,12 +93,31 @@ describe('AdminPeopleController', () => {
         expect(port.listMessages).not.toHaveBeenCalled();
     });
 
-    it('ignora un search repetido (arreglo) en lugar de fallar', async () => {
+    it('pasa el rango de fechas al puerto como fechas', async () => {
         port.listPeople.mockResolvedValue([]);
 
-        await controller.list(['a', 'b']);
+        await controller.list({ from: '2026-11-15T05:00:00.000Z', to: '2026-11-16T05:00:00.000Z' });
 
-        expect(port.listPeople).toHaveBeenCalledWith(undefined);
+        expect(port.listPeople).toHaveBeenCalledWith(undefined, {
+            from: new Date('2026-11-15T05:00:00.000Z'),
+            to: new Date('2026-11-16T05:00:00.000Z'),
+        });
+    });
+
+    it('rechaza un rango con from igual o posterior a to', async () => {
+        await expect(controller.list({ from: '2026-11-16T00:00:00Z', to: '2026-11-15T00:00:00Z' })).rejects.toThrow(BadRequestException);
+        await expect(controller.list({ from: '2026-11-15T00:00:00Z', to: '2026-11-15T00:00:00Z' })).rejects.toThrow(BadRequestException);
+        expect(port.listPeople).not.toHaveBeenCalled();
+    });
+
+    it('el DTO de personas rechaza un search repetido (arreglo), fechas inválidas y búsquedas larguísimas', async () => {
+        const parsePeople = (query: unknown) => pipe.transform(query, { type: 'query', metatype: PeopleQueryDto });
+
+        await expect(parsePeople({ search: ['a', 'b'] })).rejects.toThrow(BadRequestException);
+        await expect(parsePeople({ from: 'ayer' })).rejects.toThrow(BadRequestException);
+        await expect(parsePeople({ to: '2026-02-30T00:00:00Z' })).rejects.toThrow(BadRequestException);
+        await expect(parsePeople({ search: 'a'.repeat(101) })).rejects.toThrow(BadRequestException);
+        await expect(parsePeople({ search: 'maria', from: '2026-11-15T00:00:00.000Z' })).resolves.toMatchObject({ search: 'maria' });
     });
 
     it('protege las rutas con TenantMatchGuard y valida la entrada con ValidationPipe', () => {

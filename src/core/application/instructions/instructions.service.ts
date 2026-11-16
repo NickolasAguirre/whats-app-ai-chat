@@ -18,7 +18,7 @@ export class InstructionsService {
 
         return saved
             ? { content: saved.content, updatedAt: saved.updatedAt, isDefault: false }
-            : { content: DEFAULT_INSTRUCTIONS, updatedAt: null, isDefault: true };
+            : { content: DEFAULT_INSTRUCTIONS,  updatedAt: null, isDefault: true };
     }
 
     async save(content: string): Promise<EffectiveInstructions> {

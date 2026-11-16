@@ -93,8 +93,47 @@ describe('ConversationsQueryRepository', () => {
 
         const result = await repository.listPeople();
 
-        expect(people.query).toHaveBeenCalledWith(expect.not.stringContaining('ILIKE'));
+        const [sql, params] = people.query.mock.calls[0] as [string, unknown[]];
+        expect(sql).not.toContain('ILIKE');
+        expect(params).toEqual([]);
         expect(result[0].lastMessageAt).toEqual(new Date('2026-11-15T10:00:00Z'));
+    });
+
+    it('con rango busca el último mensaje dentro del rango: from inclusivo y to exclusivo', async () => {
+        people.query.mockResolvedValue([]);
+        const from = new Date('2026-11-15T05:00:00Z');
+        const to = new Date('2026-11-16T05:00:00Z');
+
+        await repository.listPeople(undefined, { from, to });
+
+        const [sql, params] = people.query.mock.calls[0] as [string, unknown[]];
+        expect(sql).toContain('m."createdAt" >= $1');
+        expect(sql).toContain('m."createdAt" < $2');
+        expect(params).toEqual([from, to]);
+    });
+
+    it('con rango y búsqueda numera los parámetros en orden', async () => {
+        people.query.mockResolvedValue([]);
+        const from = new Date('2026-11-15T05:00:00Z');
+
+        await repository.listPeople('maria', { from });
+
+        const [sql, params] = people.query.mock.calls[0] as [string, unknown[]];
+        expect(sql).toContain('m."createdAt" >= $1');
+        expect(sql).toContain('ILIKE $2');
+        expect(params).toEqual([from, '%maria%']);
+    });
+
+    it('solo un extremo del rango también filtra', async () => {
+        people.query.mockResolvedValue([]);
+        const to = new Date('2026-11-16T05:00:00Z');
+
+        await repository.listPeople(undefined, { to });
+
+        const [sql, params] = people.query.mock.calls[0] as [string, unknown[]];
+        expect(sql).toContain('m."createdAt" < $1');
+        expect(sql).not.toContain('>=');
+        expect(params).toEqual([to]);
     });
 
     it('getPerson devuelve null si no hay fila', async () => {

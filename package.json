@@ -21,7 +21,9 @@
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
     "migration:run": "node --env-file=.env ./node_modules/typeorm/cli.js migration:run -d dist/infrastructure/persistence/data-source.js",
-    "migration:revert": "node --env-file=.env ./node_modules/typeorm/cli.js migration:revert -d dist/infrastructure/persistence/data-source.js"
+    "migration:revert": "node --env-file=.env ./node_modules/typeorm/cli.js migration:revert -d dist/infrastructure/persistence/data-source.js",
+    "seed:demo": "node --env-file=.env ./dist/infrastructure/persistence/seed/seed-demo.js",
+    "seed:demo:clear": "node --env-file=.env ./dist/infrastructure/persistence/seed/seed-demo.js --clear"
   },
   "dependencies": {
     "@google/genai": "^2.19.0",

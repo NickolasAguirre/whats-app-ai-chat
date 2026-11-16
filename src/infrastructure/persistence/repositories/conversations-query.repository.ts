@@ -6,6 +6,7 @@ import {
     ConversationsQueryPort,
     MessagePage,
     MessagePageQuery,
+    PeopleRange,
 } from '../../../core/domain/ports/conversations-query-port/conversations-query.port.js';
 import { ConversationMessageRole } from '../../../core/domain/entities/conversation-message.entity.js';
 import { Person } from '../../../core/domain/entities/person.entity.js';
@@ -41,16 +42,38 @@ export class ConversationsQueryRepository implements ConversationsQueryPort {
         @InjectRepository(MessageSchema) private readonly messages: Repository<StoredMessage>,
     ) {}
 
-    async listPeople(search?: string): Promise<ConversationPerson[]> {
+    async listPeople(search?: string, range?: PeopleRange): Promise<ConversationPerson[]> {
+        const params: unknown[] = [];
+        const param = (value: unknown): string => {
+            params.push(value);
+            return `$${params.length}`;
+        };
+
+        // El "último mensaje" se busca dentro del rango, así que una persona sin mensajes en él no aparece (JOIN interno).
+        const latest = ['m."personId" = p.id'];
+        if (range?.from) latest.push(`m."createdAt" >= ${param(range.from)}`);
+        if (range?.to) latest.push(`m."createdAt" < ${param(range.to)}`);
+
+        const filters: string[] = [];
         const term = search?.trim();
-        const rows: PersonRow[] = term
-            ? await this.people.query(
-                  `${PEOPLE_SELECT}
-                   WHERE p."phoneNumber" ILIKE $1 OR p.name ILIKE $1
-                   ORDER BY lm."createdAt" DESC LIMIT ${MAX_PEOPLE}`,
-                  [`%${term.replace(/[\\%_]/g, (char) => `\\${char}`)}%`],
-              )
-            : await this.people.query(`${PEOPLE_SELECT} ORDER BY lm."createdAt" DESC LIMIT ${MAX_PEOPLE}`);
+        if (term) {
+            const like = param(`%${term.replace(/[\\%_]/g, (char) => `\\${char}`)}%`);
+            filters.push(`(p."phoneNumber" ILIKE ${like} OR p.name ILIKE ${like})`);
+        }
+
+        const rows: PersonRow[] = await this.people.query(
+            `SELECT p.id, p."phoneNumber", p.name, lm."createdAt" AS "lastMessageAt", left(lm.content, ${PREVIEW_LENGTH}) AS "lastMessagePreview"
+             FROM "Person" p
+             JOIN LATERAL (
+                 SELECT m."createdAt", m.content FROM "Message" m
+                 WHERE ${latest.join(' AND ')}
+                 ORDER BY m."createdAt" DESC, m.id DESC
+                 LIMIT 1
+             ) lm ON true
+             ${filters.length ? `WHERE ${filters.join(' AND ')}` : ''}
+             ORDER BY lm."createdAt" DESC LIMIT ${MAX_PEOPLE}`,
+            params,
+        );
         return rows.map((row) => this.toPerson(row));
     }
 
