@@ -1,3 +1,4 @@
+import { composeInstructions } from '../../../../core/domain/compose-instructions.js';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
@@ -31,7 +32,7 @@ describe('QwenService', () => {
     expect(result).toBe('ok');
     expect(createMock).toHaveBeenCalledWith({
       model: service.model,
-      instructions: 'sé formal',
+      instructions: composeInstructions('sé formal', undefined),
       input: [{ role: 'user', content: 'hola' }],
     });
   });
@@ -48,7 +49,7 @@ describe('QwenService', () => {
 
     expect(createMock).toHaveBeenCalledWith({
       model: service.model,
-      instructions: undefined,
+      instructions: composeInstructions(undefined, undefined),
       input: [
         { role: 'user', content: 'hola' },
         { role: 'assistant', content: 'hola, en qué te ayudo?' },
@@ -72,5 +73,6 @@ describe('QwenService', () => {
     const { instructions } = createMock.mock.calls[0][0];
     expect(instructions).toContain('sé formal');
     expect(instructions).toContain('[1] Abrimos de 9 a 18 h.');
+    expect(instructions).toContain('[[CASO:');
   });
 });

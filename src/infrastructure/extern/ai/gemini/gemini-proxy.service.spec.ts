@@ -1,3 +1,4 @@
+import { composeInstructions } from '../../../../core/domain/compose-instructions.js';
 import { Test, TestingModule } from '@nestjs/testing';
 import { GoogleGenAI } from '@google/genai';
 import { HttpService } from '@nestjs/axios';
@@ -32,7 +33,7 @@ describe('GeminiService', () => {
     expect(createMock).toHaveBeenCalledWith({
       model: service.geminiModel,
       input: 'hola',
-      system_instruction: 'sé formal',
+      system_instruction: composeInstructions('sé formal', undefined),
     });
   });
 
@@ -49,7 +50,7 @@ describe('GeminiService', () => {
     expect(createMock).toHaveBeenCalledWith({
       model: service.geminiModel,
       input: 'Conversación previa:\nUsuario: hola\nAsistente: hola, en qué te ayudo?\n\nMensaje actual del usuario: quiero un turno',
-      system_instruction: undefined,
+      system_instruction: composeInstructions(undefined, undefined),
     });
   });
 
@@ -62,5 +63,6 @@ describe('GeminiService', () => {
     const { system_instruction } = createMock.mock.calls[0][0];
     expect(system_instruction).toContain('sé formal');
     expect(system_instruction).toContain('[1] Abrimos de 9 a 18 h.');
+    expect(system_instruction).toContain('[[CASO:');
   });
 });

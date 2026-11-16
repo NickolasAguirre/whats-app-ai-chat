@@ -8,6 +8,8 @@ import { MessageMemoryPort } from '../../domain/ports/message-memory-port/messag
 import { MessageHistoryPort } from '../../domain/ports/message-history-port/message-history.port.js';
 import { ConversationMessage } from '../../domain/entities/conversation-message.entity.js';
 import { WhatsAppMessageBuilder } from '../../domain/entities/whats-app-message.entity.js';
+import { extractDerivation } from '../../domain/derivation.js';
+import { CasesService } from '../cases/cases.service.js';
 
 /** Cuántos mensajes recientes se rehidratan desde la BD cuando Redis no tiene el contexto (igual que el límite de Redis). */
 const HISTORY_CONTEXT_LIMIT = 20;
@@ -24,6 +26,7 @@ export class WhatsappMessagesControllerService {
         @Inject(KnowledgePort) private readonly knowledge: KnowledgePort,
         @Inject(MessageMemoryPort) private readonly messageMemory: MessageMemoryPort,
         @Inject(MessageHistoryPort) private readonly messageHistory: MessageHistoryPort,
+        @Inject(CasesService) private readonly cases: CasesService,
     ) {}
 
     async handleIncomingMessage(
@@ -47,11 +50,13 @@ export class WhatsappMessagesControllerService {
             const history = await this.getContextSafely(person.id, inbound.id);
             const knowledge = await this.searchKnowledgeSafely(text);
 
-            const replyText = await this.aiMessageGenerator.generateMessage(text, {
+            const generated = await this.aiMessageGenerator.generateMessage(text, {
                 instructions: instructions.content,
                 knowledge,
                 history,
             });
+            // El LLM marca con [[CASO: ...]] lo que no pudo resolver; el cliente solo recibe el texto sin la marca.
+            const { text: replyText, caseSummary } = extractDerivation(generated);
 
             const reply = new WhatsAppMessageBuilder()
                 .setFromNumber(to)
@@ -66,6 +71,10 @@ export class WhatsappMessagesControllerService {
             await this.appendMessageSafely(person.id, { role: 'inbound', text, timestamp: now });
             await this.appendMessageSafely(person.id, { role: 'outbound', text: replyText, timestamp: new Date() });
             await this.saveOutboundSafely(person.id, replyText);
+
+            if (caseSummary) {
+                await this.openCaseSafely(person.id, caseSummary);
+            }
         } catch (error) {
             // El mensaje quedó sin respuesta: se libera su id para que el reintento de YCloud no se tome por duplicado.
             await this.discardInboundSafely(inbound.id);
@@ -103,6 +112,15 @@ export class WhatsappMessagesControllerService {
             await this.messageHistory.save({ personId, role: 'outbound', content: text, createdAt: new Date() });
         } catch (error) {
             this.logger.warn(`No se pudo guardar la respuesta en el historial (person=${personId}): ${error}`);
+        }
+    }
+
+    /** Abre el caso para el call center; si falla, el cliente ya recibió su respuesta y solo se registra el aviso. */
+    private async openCaseSafely(personId: string, summary: string): Promise<void> {
+        try {
+            await this.cases.openFromAi(personId, summary);
+        } catch (error) {
+            this.logger.warn(`No se pudo abrir el caso para el call center (person=${personId}): ${error}`);
         }
     }
 

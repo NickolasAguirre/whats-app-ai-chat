@@ -7,6 +7,7 @@ import { PersonRepositoryPort } from '../../domain/ports/person-port/person.port
 import { KnowledgePort } from '../../domain/ports/knowledge-port/knowledge.port.js';
 import { MessageMemoryPort } from '../../domain/ports/message-memory-port/message-memory.port.js';
 import { MessageHistoryPort } from '../../domain/ports/message-history-port/message-history.port.js';
+import { CasesService } from '../cases/cases.service.js';
 
 describe('WhatsappMessagesControllerService', () => {
   let service: WhatsappMessagesControllerService;
@@ -17,6 +18,7 @@ describe('WhatsappMessagesControllerService', () => {
   const knowledgeMock = { search: vi.fn() };
   const memoryMock = { getRecentMessages: vi.fn(), appendMessage: vi.fn() };
   const historyMock = { save: vi.fn(), findRecent: vi.fn(), discard: vi.fn() };
+  const casesMock = { openFromAi: vi.fn() };
   const person = { id: 'p1', phoneNumber: '+1555', createdAt: new Date() };
   const defaultInstructions = { content: 'Instrucciones por defecto', updatedAt: null, isDefault: true };
 
@@ -29,6 +31,7 @@ describe('WhatsappMessagesControllerService', () => {
     historyMock.save.mockResolvedValueOnce('m1').mockResolvedValue('m2');
     historyMock.findRecent.mockResolvedValue([]);
     aiMock.generateMessage.mockResolvedValue('la respuesta');
+    casesMock.openFromAi.mockResolvedValue({ id: 'c1' });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -40,6 +43,7 @@ describe('WhatsappMessagesControllerService', () => {
         { provide: KnowledgePort, useValue: knowledgeMock },
         { provide: MessageMemoryPort, useValue: memoryMock },
         { provide: MessageHistoryPort, useValue: historyMock },
+        { provide: CasesService, useValue: casesMock },
       ],
     }).compile();
 
@@ -227,6 +231,47 @@ describe('WhatsappMessagesControllerService', () => {
     it('con el entrante procesado con éxito no se libera nada', async () => {
       await service.handleIncomingMessage('+1555', '+1999', 'hola');
 
+      expect(historyMock.discard).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('derivación a un caso', () => {
+    const sentBody = () => (whatsAppMock.sendMessage.mock.calls.at(-1)?.[0] as { text: { body: string } }).text.body;
+
+    it('quita la marca [[CASO: ...]] del mensaje y abre un caso con el resumen', async () => {
+      aiMock.generateMessage.mockResolvedValue('Voy a pasarte con una persona. [[CASO: Quiere cambiar la dirección de un pedido]]');
+
+      await service.handleIncomingMessage('+1555', '+1999', 'cambiar dirección');
+
+      expect(sentBody()).toBe('Voy a pasarte con una persona.');
+      expect(casesMock.openFromAi).toHaveBeenCalledWith('p1', 'Quiere cambiar la dirección de un pedido');
+      expect(historyMock.save).toHaveBeenLastCalledWith(
+        expect.objectContaining({ role: 'outbound', content: 'Voy a pasarte con una persona.' }),
+      );
+    });
+
+    it('si el LLM solo manda la marca, el cliente recibe un aviso por defecto', async () => {
+      aiMock.generateMessage.mockResolvedValue('[[CASO: Reclamo por cobro doble]]');
+
+      await service.handleIncomingMessage('+1555', '+1999', 'me cobraron dos veces');
+
+      expect(sentBody()).toContain('Una persona de nuestro equipo te contactará');
+      expect(casesMock.openFromAi).toHaveBeenCalledWith('p1', 'Reclamo por cobro doble');
+    });
+
+    it('sin marca no abre ningún caso', async () => {
+      await service.handleIncomingMessage('+1555', '+1999', 'hola');
+
+      expect(casesMock.openFromAi).not.toHaveBeenCalled();
+    });
+
+    it('si falla abrir el caso, el cliente igual recibe su respuesta y no se libera el mensaje entrante', async () => {
+      aiMock.generateMessage.mockResolvedValue('Te paso con una persona. [[CASO: x]]');
+      casesMock.openFromAi.mockRejectedValue(new Error('db caída'));
+
+      await expect(service.handleIncomingMessage('+1555', '+1999', 'ayuda')).resolves.toBeUndefined();
+
+      expect(whatsAppMock.sendMessage).toHaveBeenCalledTimes(1);
       expect(historyMock.discard).not.toHaveBeenCalled();
     });
   });

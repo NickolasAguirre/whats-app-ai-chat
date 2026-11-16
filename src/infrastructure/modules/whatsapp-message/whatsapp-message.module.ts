@@ -8,9 +8,10 @@ import { InstructionsModule } from '../instructions/instructions.module.js';
 import { RagModule } from '../rag/rag.module.js';
 import { MessageMemoryRepositoryModule } from '../persistence/message-memory-repository.module.js';
 import { MessageHistoryRepositoryModule } from '../persistence/message-history-repository.module.js';
+import { CasesModule } from '../cases/cases.module.js';
 
 @Module({
-  imports: [AiModule, WhatsAppModule, PersonRepositoryModule, InstructionsModule, RagModule, MessageMemoryRepositoryModule, MessageHistoryRepositoryModule],
+  imports: [AiModule, WhatsAppModule, PersonRepositoryModule, InstructionsModule, RagModule, MessageMemoryRepositoryModule, MessageHistoryRepositoryModule, CasesModule],
   controllers: [WhatsappMessagesControllerController],
   providers: [WhatsappMessagesControllerService],
 })
