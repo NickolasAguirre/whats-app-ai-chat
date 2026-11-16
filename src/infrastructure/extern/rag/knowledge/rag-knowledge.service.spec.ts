@@ -6,11 +6,10 @@ describe('RagKnowledgeService', () => {
   const httpMock = { request: vi.fn() };
   const settings: Record<string, string | undefined> = {
     RAG_API_URL: 'http://rag:3100',
-    RAG_API_KEY: 'clave-rag',
-    RAG_COLLECTION: 'knowledge',
   };
   const configMock = { get: (key: string) => settings[key] };
-  const service = new RagKnowledgeService(httpMock as never, configMock as never);
+  const tokenMock = { getToken: vi.fn(), invalidateToken: vi.fn() };
+  const service = new RagKnowledgeService(httpMock as never, configMock as never, tokenMock as never);
   const ragDocument = {
     id: 'd1',
     kind: 'pdf',
@@ -23,11 +22,12 @@ describe('RagKnowledgeService', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    tokenMock.getToken.mockResolvedValue('jwt-de-servicio');
     delete settings.KNOWLEDGE_TOP_K;
     delete settings.KNOWLEDGE_MIN_SCORE;
   });
 
-  it('list pide los documentos de la colección con la API key y los convierte a KnowledgeItem', async () => {
+  it('list pide los documentos de la colección con el token de servicio y los convierte a KnowledgeItem', async () => {
     httpMock.request.mockReturnValue(of({ data: [ragDocument] }));
 
     const [item] = await service.list();
@@ -35,8 +35,8 @@ describe('RagKnowledgeService', () => {
     expect(httpMock.request).toHaveBeenCalledWith(
       expect.objectContaining({
         method: 'GET',
-        url: 'http://rag:3100/collections/knowledge/documents',
-        headers: expect.objectContaining({ 'X-API-Key': 'clave-rag' }),
+        url: 'http://rag:3100/collections/qwen/documents',
+        headers: expect.objectContaining({ Authorization: 'Bearer jwt-de-servicio' }),
       }),
     );
     expect(item).toEqual({
@@ -59,9 +59,9 @@ describe('RagKnowledgeService', () => {
     await service.remove('d1');
 
     expect(httpMock.request.mock.calls.map(([options]) => [options.method, options.url])).toEqual([
-      ['POST', 'http://rag:3100/collections/knowledge/documents/text'],
-      ['PUT', 'http://rag:3100/collections/knowledge/documents/d1/text'],
-      ['DELETE', 'http://rag:3100/collections/knowledge/documents/d1'],
+      ['POST', 'http://rag:3100/collections/qwen/documents/text'],
+      ['PUT', 'http://rag:3100/collections/qwen/documents/d1/text'],
+      ['DELETE', 'http://rag:3100/collections/qwen/documents/d1'],
     ]);
   });
 
@@ -94,7 +94,7 @@ describe('RagKnowledgeService', () => {
 
       expect(result).toEqual(['muy parecido', 'justo en el límite']);
       expect(httpMock.request).toHaveBeenCalledWith(
-        expect.objectContaining({ method: 'POST', url: 'http://rag:3100/collections/knowledge/search', data: { query: 'horarios', topK: 4 } }),
+        expect.objectContaining({ method: 'POST', url: 'http://rag:3100/collections/qwen/search', data: { query: 'horarios', topK: 4 } }),
       );
     });
 
@@ -106,6 +106,75 @@ describe('RagKnowledgeService', () => {
       expect(await service.search('x')).toEqual(['a']);
       expect(httpMock.request).toHaveBeenCalledWith(expect.objectContaining({ data: { query: 'x', topK: 2 } }));
     });
+  });
+
+  it('no envía X-API-Key ni X-Tenant-Id y usa siempre la colección qwen', async () => {
+    settings.RAG_COLLECTION = 'otra';
+    httpMock.request.mockReturnValue(of({ data: [] }));
+
+    await service.list();
+
+    const [options] = httpMock.request.mock.calls[0];
+    expect(options.url).toBe('http://rag:3100/collections/qwen/documents');
+    expect(options.headers).not.toHaveProperty('X-API-Key');
+    expect(options.headers).not.toHaveProperty('X-Tenant-Id');
+    delete settings.RAG_COLLECTION;
+  });
+
+  it('pide el token de servicio en cada llamada (el puerto se encarga de cachearlo)', async () => {
+    httpMock.request.mockReturnValue(of({ data: [] }));
+
+    await service.list();
+    await service.list();
+
+    expect(tokenMock.getToken).toHaveBeenCalledTimes(2);
+  });
+
+  it('si no hay token de servicio rechaza con 503 y no llama a Rag-API', async () => {
+    tokenMock.getToken.mockRejectedValue(new ServiceUnavailableException('sin token'));
+
+    await expect(service.list()).rejects.toThrow(ServiceUnavailableException);
+    expect(httpMock.request).not.toHaveBeenCalled();
+  });
+
+  it('pone un tope de tiempo a cada petición a Rag-API', async () => {
+    httpMock.request.mockReturnValue(of({ data: [] }));
+
+    await service.list();
+
+    expect(httpMock.request).toHaveBeenCalledWith(expect.objectContaining({ timeout: 10000 }));
+  });
+
+  it('ante un 401 invalida el token, reintenta una vez con el nuevo y devuelve el resultado', async () => {
+    tokenMock.getToken.mockResolvedValueOnce('viejo').mockResolvedValueOnce('nuevo');
+    httpMock.request
+      .mockReturnValueOnce(throwError(() => ({ response: { status: 401, data: { message: 'Unauthorized' } } })))
+      .mockReturnValueOnce(of({ data: [ragDocument] }));
+
+    const items = await service.list();
+
+    expect(tokenMock.invalidateToken).toHaveBeenCalledTimes(1);
+    expect(httpMock.request).toHaveBeenCalledTimes(2);
+    expect(httpMock.request.mock.calls[1][0].headers.Authorization).toBe('Bearer nuevo');
+    expect(items).toHaveLength(1);
+  });
+
+  it('si Rag-API rechaza también el token nuevo responde 503 (nunca 401: el panel cerraría la sesión del usuario)', async () => {
+    httpMock.request.mockReturnValue(throwError(() => ({ response: { status: 401, data: { message: 'Unauthorized' } } })));
+
+    const failure = await service.list().catch((error) => error);
+
+    expect(failure).toBeInstanceOf(ServiceUnavailableException);
+    expect(httpMock.request).toHaveBeenCalledTimes(2);
+  });
+
+  it('un 403 de Rag-API no dispara la invalidación del token', async () => {
+    httpMock.request.mockReturnValue(throwError(() => ({ response: { status: 403, data: { message: 'Forbidden' } } })));
+
+    const failure = await service.list().catch((error) => error);
+
+    expect(failure.getStatus()).toBe(403);
+    expect(tokenMock.invalidateToken).not.toHaveBeenCalled();
   });
 
   describe('errores', () => {

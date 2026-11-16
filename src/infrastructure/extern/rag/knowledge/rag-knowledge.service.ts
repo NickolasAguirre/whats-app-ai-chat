@@ -9,6 +9,8 @@ import {
     KnowledgeNoteInput,
     KnowledgePort,
 } from '../../../../core/domain/ports/knowledge-port/knowledge.port.js';
+import { ServiceTokenPort } from '../../../../core/domain/ports/service-token-port/service-token.port.js';
+import { KNOWLEDGE_COLLECTION } from '../../../../core/domain/tenant.js';
 
 interface RagDocument {
     id: string;
@@ -29,12 +31,16 @@ interface RagSearchHit {
 const DEFAULT_TOP_K = 4;
 const DEFAULT_MIN_SCORE = 0.35;
 const UNAVAILABLE_MESSAGE = 'No se pudo conectar con el servicio de conocimiento.';
+const CREDENTIAL_REJECTED_MESSAGE = 'El servicio de conocimiento rechazó la credencial del bot.';
+/** Tope de cada petición a Rag-API: sin él, un Rag-API colgado dejaría colgado el webhook. */
+const REQUEST_TIMEOUT_MS = 10_000;
 
 @Injectable()
 export class RagKnowledgeService implements KnowledgePort {
     constructor(
         private readonly http: HttpService,
         private readonly config: ConfigService,
+        private readonly serviceToken: ServiceTokenPort,
     ) {}
 
     async list(): Promise<KnowledgeItem[]> {
@@ -79,12 +85,16 @@ export class RagKnowledgeService implements KnowledgePort {
         return results.filter((hit) => hit.score >= minScore).map((hit) => hit.text);
     }
 
-    private async request<T>(options: AxiosRequestConfig): Promise<T> {
+    private async request<T>(options: AxiosRequestConfig, retriedAfterRejection = false): Promise<T> {
+        // Fuera del try: si no hay token, el 503 del puerto se propaga tal cual (no se mezcla con los errores HTTP de Rag-API).
+        const token = await this.serviceToken.getToken();
+
         try {
             const response = await firstValueFrom(
                 this.http.request<T>({
+                    timeout: REQUEST_TIMEOUT_MS,
                     ...options,
-                    headers: { ...options.headers, 'X-API-Key': this.config.get<string>('RAG_API_KEY') ?? '' },
+                    headers: { ...options.headers, Authorization: `Bearer ${token}` },
                 }),
             );
             return response.data;
@@ -95,6 +105,16 @@ export class RagKnowledgeService implements KnowledgePort {
                 throw new ServiceUnavailableException(UNAVAILABLE_MESSAGE);
             }
 
+            // 401: el token de servicio fue rechazado. Se descarta y se reintenta una vez; si vuelve a fallar es un 503 del servicio
+            // (un 401 llegaría al panel y su interceptor cerraría la sesión del usuario, que no tiene la culpa).
+            if (axiosError.response.status === 401) {
+                if (retriedAfterRejection) {
+                    throw new ServiceUnavailableException(CREDENTIAL_REJECTED_MESSAGE);
+                }
+                this.serviceToken.invalidateToken();
+                return this.request<T>(options, true);
+            }
+
             const message = axiosError.response.data?.message;
             throw new HttpException(Array.isArray(message) ? message.join(' ') : (message ?? 'Error en el servicio de conocimiento.'), axiosError.response.status);
         }
@@ -102,8 +122,7 @@ export class RagKnowledgeService implements KnowledgePort {
 
     private collectionUrl(): string {
         const baseUrl = this.config.get<string>('RAG_API_URL') ?? 'http://localhost:3100';
-        const collection = this.config.get<string>('RAG_COLLECTION') ?? 'knowledge';
-        return `${baseUrl}/collections/${encodeURIComponent(collection)}`; 
+        return `${baseUrl}/collections/${encodeURIComponent(KNOWLEDGE_COLLECTION)}`;
     }
 
     private documentsUrl(): string {

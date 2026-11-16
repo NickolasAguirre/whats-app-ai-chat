@@ -1,6 +1,7 @@
 import { DataSourceOptions } from 'typeorm';
-import { PersonSchema, InstructionsSchema } from './schemas/index.js';
+import { PersonSchema, InstructionsSchema, MessageSchema } from './schemas/index.js';
 import { InitSchema1730000000000 } from './migrations/1730000000000-init-schema.js';
+import { CreateMessage1731000000000 } from './migrations/1731000000000-create-message.js';
 
 type Env = Record<string, string | undefined>;
 
@@ -21,8 +22,8 @@ export function buildDatabaseOptions(env: Env): DataSourceOptions {
         type: 'postgres',
         url: resolveDatabaseUrl(env),
         uuidExtension: 'pgcrypto',
-        entities: [PersonSchema, InstructionsSchema],
-        migrations: [InitSchema1730000000000],
+        entities: [PersonSchema, InstructionsSchema, MessageSchema],
+        migrations: [InitSchema1730000000000, CreateMessage1731000000000],
         synchronize: false,
     };
 }

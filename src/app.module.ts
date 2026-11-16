@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common';
 import { createObserveModule } from '@nestjs/observe';
 import { ConfigModule } from '@nestjs/config';
-import { WhatsappMessagesControllerModule } from './controller/whatsapp-message.module.js';
-import { WhatsAppModule } from './infrastructure/extern/whats-app/whats-app-proxy.module.js';
-import { AiModule } from './infrastructure/extern/ai/ai.module.js';
-import { RedisModule } from './infrastructure/persistence/redis/redis.module.js';
-import { AdminModule } from './controller/admin.module.js';
-import { RagModule } from './infrastructure/extern/rag/rag.module.js';
-import { DatabaseModule } from './infrastructure/persistence/database.module.js';
+import { WhatsappMessagesControllerModule } from './infrastructure/modules/whatsapp-message/whatsapp-message.module.js';
+import { WhatsAppModule } from './infrastructure/modules/whats-app/whats-app-proxy.module.js';
+import { AiModule } from './infrastructure/modules/ai/ai.module.js';
+import { RedisModule } from './infrastructure/modules/persistence/redis.module.js';
+import { AdminModule } from './infrastructure/modules/admin/admin.module.js';
+import { RagModule } from './infrastructure/modules/rag/rag.module.js';
+import { DatabaseModule } from './infrastructure/modules/persistence/database.module.js';
+import { AuthModule } from './infrastructure/modules/auth/auth.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -30,7 +31,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     RedisModule,
     RagModule,
     AdminModule,
+    AuthModule,
   ],
-  providers: [],
 })
 export class AppModule {}

@@ -1,10 +1,12 @@
-import { Body, Controller, Delete, Get, HttpCode, Put, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Put, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { TenantMatchGuard } from './guards/tenant-match.guard.js';
 import { SaveInstructionsDto } from './dto/save-instructions.dto.js';
-import { InstructionsService } from '../core/use-case/instructions/instructions.service.js';
+import { InstructionsService } from '../core/application/instructions/instructions.service.js';
 
 // El ValidationPipe va solo en los endpoints de administración: el DTO del webhook de YCloud no tiene decoradores.
 @ApiTags('admin')
+@UseGuards(TenantMatchGuard)
 @Controller('admin/instructions')
 @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
 export class AdminInstructionsController {

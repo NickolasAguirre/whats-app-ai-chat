@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { AiGenerateOptions, AiPort } from '../../../core/domain/ports/ai-port/ai.port.js';
 import { AiSelectedPort } from './ports/ai-selected.port.js';
-import { GEMINI_AI_PORT } from './gemini/gemini-proxy.module.js';
-import { QWEN_AI_PORT } from './qwen/qwen.module.js';
+import { GEMINI_AI_PORT } from '../../modules/ai/gemini-proxy.module.js';
+import { QWEN_AI_PORT } from '../../modules/ai/qwen.module.js';
 
 @Injectable()
 export class AiService implements AiPort {

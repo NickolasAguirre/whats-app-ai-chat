@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WhatsappMessagesControllerController } from './whatsapp-message.controller.js';
-import { WhatsappMessagesControllerService } from '../core/use-case/whats-app-message/whats-app-message.service.js';
+import { WhatsappMessagesControllerService } from '../core/application/whats-app-message/whats-app-message.service.js';
 import { YCloudWebhookSignatureGuard } from '../infrastructure/extern/whats-app/guards/ycloud-webhook-signature.guard.js';
 
 describe('WhatsappMessagesControllerController', () => {
@@ -29,13 +29,13 @@ describe('WhatsappMessagesControllerController', () => {
   it('receiveMessage pasa el mensaje entrante al use-case', async () => {
     const event = {
       whatsappInboundMessage: {
-        from: '+1555', to: '+1999', text: { body: 'hola' },
+        id: 'wamid.1', from: '+1555', to: '+1999', text: { body: 'hola' },
         customerProfile: { name: 'Nico' },
       },
     } as any;
 
     await controller.receiveMessage(event);
 
-    expect(serviceMock.handleIncomingMessage).toHaveBeenCalledWith('+1555', '+1999', 'hola', 'Nico');
+    expect(serviceMock.handleIncomingMessage).toHaveBeenCalledWith('+1555', '+1999', 'hola', 'Nico', 'wamid.1');
   });
 });

@@ -11,6 +11,7 @@ export interface KnowledgeNoteInput {
     content: string;
 }
 
+/** El conocimiento del tenant de este bot: el tenant viaja dentro del token de servicio, no como parámetro. */
 export abstract class KnowledgePort {
     abstract list(): Promise<KnowledgeItem[]>;
     abstract uploadFile(file: KnowledgeFileInput): Promise<KnowledgeItem>;

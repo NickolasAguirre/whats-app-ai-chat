@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AiService } from './ai.service.js';
-import { GEMINI_AI_PORT } from './gemini/gemini-proxy.module.js';
-import { QWEN_AI_PORT } from './qwen/qwen.module.js';
+import { GEMINI_AI_PORT } from '../../modules/ai/gemini-proxy.module.js';
+import { QWEN_AI_PORT } from '../../modules/ai/qwen.module.js';
 
 describe('AiService', () => {
   let service: AiService;

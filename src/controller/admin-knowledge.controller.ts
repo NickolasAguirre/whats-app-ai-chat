@@ -10,12 +10,14 @@ import {
     Post,
     Put,
     UploadedFile,
+    UseGuards,
     UseInterceptors,
     UsePipes,
     ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { TenantMatchGuard } from './guards/tenant-match.guard.js';
 import { NoteDto } from './dto/note.dto.js';
 import { KnowledgePort } from '../core/domain/ports/knowledge-port/knowledge.port.js';
 
@@ -30,6 +32,7 @@ interface UploadedBinary {
 
 // El ValidationPipe va solo en los endpoints de administración: el DTO del webhook de YCloud no tiene decoradores.
 @ApiTags('admin')
+@UseGuards(TenantMatchGuard)
 @Controller('admin/knowledge')
 @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
 export class AdminKnowledgeController {

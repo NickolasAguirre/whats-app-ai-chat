@@ -41,8 +41,8 @@ Si el constructor de una clase solo pide otras clases inyectables (otro `@Inject
 ## Cómo agregar un proveedor de IA nuevo (patrón Gemini/Qwen)
 
 1. Crear `infrastructure/extern/ai/<proveedor>/<proveedor>.service.ts` — la clase implementa `AiSelectedPort`, con `generateMessage(message: string): Promise<string>`.
-2. Crear `infrastructure/extern/ai/<proveedor>/<proveedor>.module.ts` — exportar una constante de token propia (`export const <PROVEEDOR>_AI_PORT = "..."`), bindearla con `useExisting` al service, y `exports: [<PROVEEDOR>_AI_PORT]`. El SDK del proveedor (si necesita API key) va como provider con `useFactory`.
-3. En `ai.module.ts`: agregar el módulo nuevo al array `imports`.
+2. Crear `infrastructure/modules/ai/<proveedor>.module.ts` (los módulos viven solo en `infrastructure/modules/`) — exportar una constante de token propia (`export const <PROVEEDOR>_AI_PORT = "..."`), bindearla con `useExisting` al service, y `exports: [<PROVEEDOR>_AI_PORT]`. El SDK del proveedor (si necesita API key) va como provider con `useFactory`.
+3. En `infrastructure/modules/ai/ai.module.ts`: agregar el módulo nuevo al array `imports`.
 4. En `ai.service.ts`: inyectar el token nuevo con `@Inject(<PROVEEDOR>_AI_PORT)`, tipado como `AiSelectedPort`, e incorporarlo a la lógica de `getProvider()`.
 
 No hace falta tocar nada dentro de `core/` para agregar un proveedor — es exactamente el punto de la arquitectura por puertos.

@@ -3,22 +3,26 @@
 ## Capas (Clean Architecture / Hexagonal)
 
 ```
-controller/              → Interface Adapters (HTTP: controllers, guards, DTOs de entrada)
-infrastructure/extern/    → Interface Adapters (adapters concretos: YCloud, Gemini, Qwen)
-core/use-case/            → Application (casos de uso, orquestan los puertos)
-core/domain/               → Domain (entidades + puertos/interfaces) — la capa más interna
+controller/                → Interface Adapters (HTTP: controllers, decorators, DTOs de entrada)
+infrastructure/extern/      → Interface Adapters (adapters concretos: YCloud, Gemini, Qwen, Rag-API, JWT)
+infrastructure/persistence/ → Interface Adapters (repositorios, schemas, migraciones, Redis)
+infrastructure/modules/     → Composición: TODOS los `*.module.ts` (DI de Nest), por feature
+core/application/           → Application (casos de uso, orquestan los puertos)
+core/domain/                → Domain (entidades + puertos/interfaces) — la capa más interna
 ```
+
+Regla de ubicación: ningún `*.module.ts` vive fuera de `infrastructure/modules/` (salvo `app.module.ts`). Los módulos solo cablean; el código real (services, repositorios, guards) queda en `extern/` o `persistence/`.
 
 ## Regla de dependencia
 
 Solo se puede depender **hacia adentro**:
 
 ```
-infrastructure/extern  →  core/use-case  →  core/domain
-controller              →  core/use-case  →  core/domain
+infrastructure/extern  →  core/application  →  core/domain
+controller              →  core/application  →  core/domain
 ```
 
-`core/domain` no importa nada de `core/use-case`, `infrastructure` ni `controller`. `core/use-case` puede importar `core/domain` libremente, pero nunca `infrastructure` ni `controller`.
+`core/domain` no importa nada de `core/application`, `infrastructure` ni `controller`. `core/application` puede importar `core/domain` libremente, pero nunca `infrastructure` ni `controller`. `infrastructure/modules` es la capa de composición y puede importar de todas las demás.
 
 Esta regla ya se violó y se corrigió dos veces en este proyecto: una vez con un DTO de envío que vivía en `use-case` pero lo importaba un puerto de `domain`, y otra con el payload crudo del webhook de YCloud que casi terminaba tipando un parámetro del use-case. Es el error más fácil de cometer al agregar un DTO nuevo sin pensar primero en qué capa vive el concepto que representa.
 
@@ -47,16 +51,27 @@ Hoy `AiService.getProvider()` devuelve siempre el proveedor de Qwen — no hay l
 
 ## Mapa de módulos actual
 
+Todos en `src/infrastructure/modules/<feature>/`:
+
 ```
 AppModule
-├── WhatsappMessagesControllerModule
-│   ├── AiModule
-│   │   ├── GeminiModule   → exporta GEMINI_AI_PORT
-│   │   └── QwenModule     → exporta QWEN_AI_PORT
-│   │       (AiModule bindea AiPort → AiService, exporta AiPort)
-│   └── WhatsAppModule     → exporta WhatsAppPort (adapter: WhatsAppService / YCloud)
+├── DatabaseModule, RedisModule, AuthModule        (modules/persistence, modules/auth)
+├── AdminModule                                    (modules/admin)
+│   ├── InstructionsModule                         (modules/instructions)
+│   └── RagModule                                  (modules/rag)
+└── WhatsappMessagesControllerModule               (modules/whatsapp-message)
+    ├── AiModule                                   (modules/ai)
+    │   ├── GeminiModule   → exporta GEMINI_AI_PORT
+    │   └── QwenModule     → exporta QWEN_AI_PORT
+    │       (AiModule bindea AiPort → AiService, exporta AiPort)
+    ├── WhatsAppModule     → exporta WhatsAppPort (modules/whats-app, adapter YCloud)
+    ├── PersonRepositoryModule, InstructionsRepositoryModule,
+    │   MessageHistoryRepositoryModule, MessageMemoryRepositoryModule   (modules/persistence)
+    └── InstructionsModule, RagModule
 ```
+
+`JwtAuth` (verificador de tokens de container-api) vive en `infrastructure/extern/auth/jwt-auth/`.
 
 ## Base de datos
 
-**No definida todavía.** El sistema hoy no persiste nada (ni conversaciones, ni mensajes, ni estado de usuarios) — cada mensaje entrante se procesa y se responde sin guardar historial.
+PostgreSQL vía TypeORM (personas, instrucciones, historial `Message`) y Redis (contexto reciente de mensajes). Esquemas en `infrastructure/persistence/schemas/`, migraciones en `infrastructure/persistence/migrations/`.
